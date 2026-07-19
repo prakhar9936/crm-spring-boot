@@ -23,4 +23,8 @@ public class User {
     private String lastName;
 
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(20)")
+    private Role role;
 }
