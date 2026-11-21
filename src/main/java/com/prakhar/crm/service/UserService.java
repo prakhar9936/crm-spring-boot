@@ -1,11 +1,14 @@
 package com.prakhar.crm.service;
 
+import com.prakhar.crm.dto.UserResponse;
 import com.prakhar.crm.entity.Role;
 import com.prakhar.crm.entity.User;
 import com.prakhar.crm.exception.ForbiddenException;
 import com.prakhar.crm.exception.ResourceNotFoundException;
 import com.prakhar.crm.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,6 +16,18 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    public Page<UserResponse> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getEmail(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getRole(),
+                        user.isActive()
+                ));
+    }
 
     public void promoteToAdmin(Long id) {
         User user = userRepository.findById(id)
@@ -28,6 +43,23 @@ public class UserService {
             throw new ForbiddenException("You cannot demote yourself");
         }
         user.setRole(Role.EMPLOYEE);
+        userRepository.save(user);
+    }
+
+    public void activateUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        user.setActive(true);
+        userRepository.save(user);
+    }
+
+    public void deactivateUser(Long id, String loggedInEmail) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        if (user.getEmail().equalsIgnoreCase(loggedInEmail)) {
+            throw new ForbiddenException("You cannot deactivate yourself");
+        }
+        user.setActive(false);
         userRepository.save(user);
     }
 }

@@ -26,7 +26,7 @@ A Customer Relationship Management (CRM) backend REST API built with Spring Boot
 - ADMIN can change or delete any client and any contract.
 - EMPLOYEE can change or delete only their own clients, and only contracts that belong to their own clients. Otherwise the API returns 403.
 - Any logged-in user can read clients and contracts.
-- Only ADMIN can promote or demote a user (an admin cannot demote themselves).
+- Only ADMIN can list users, promote/demote, or activate/deactivate a user (an admin cannot demote or deactivate themselves).
 - Inactive users cannot log in (403 "Account is inactive").
 - A client that still has contracts cannot be deleted (409 Conflict).
 - Wrong email or password returns 401.
@@ -43,6 +43,11 @@ All endpoints except /api/auth/** and Swagger need a JWT token (Authorization: B
 - `GET /api/users/me` - Details of the logged-in user
 - `PUT /api/users/{id}/promote` - Promote a user to ADMIN (ADMIN only)
 - `PUT /api/users/{id}/demote` - Demote an ADMIN to EMPLOYEE (ADMIN only, cannot demote yourself)
+
+### Users (ADMIN)
+- `GET /api/users?page=0&size=10` - List all users (paginated, ADMIN)
+- `PUT /api/users/{id}/activate` - Activate a user account (ADMIN)
+- `PUT /api/users/{id}/deactivate` - Deactivate a user account (ADMIN, cannot deactivate self)
 
 ### Clients
 - `POST /api/clients` - Create a client (assigned to the logged-in user)
@@ -90,7 +95,7 @@ $env:DB_PASSWORD = "your_mysql_password"
 ```powershell
 .\mvnw.cmd clean test "-Dtest=AuthServiceTest,ClientServiceTest,ContractServiceTest,UserServiceTest,DashboardServiceTest"
 ```
-There are 26 unit tests (Mockito).
+There are 30 unit tests (Mockito).
 
 ## Project Structure
 - `controller` - REST endpoints
@@ -103,8 +108,7 @@ There are 26 unit tests (Mockito).
 - `security` - JwtAuthFilter, JwtUtil
 
 ## Status
-Working: auth, roles, clients, contracts, contract pagination and status filter, contract validation, dashboard statistics, inactive-user login block, demote endpoint, ownership rules, Swagger, unit tests.
+Working: auth, roles, admin user management, clients, contracts, contract pagination and status filter, contract validation, dashboard statistics, inactive-user login block, demote endpoint, ownership rules, Swagger, unit tests.
 
 Planned:
-- Admin user management
 - More tests and Docker
