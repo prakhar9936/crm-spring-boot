@@ -27,4 +27,10 @@ public class UserController {
         userService.promoteToAdmin(id);
         return ResponseEntity.ok("User promoted to ADMIN");
     }
+
+    @PutMapping("/{id}/demote")
+    public ResponseEntity<String> demoteToEmployee(@PathVariable Long id, Authentication authentication) {
+        userService.demoteToEmployee(id, authentication.getName());
+        return ResponseEntity.ok("User demoted to EMPLOYEE");
+    }
 }

@@ -7,7 +7,8 @@ import com.prakhar.crm.dto.UserResponse;
 import com.prakhar.crm.entity.Role;
 import com.prakhar.crm.entity.User;
 import com.prakhar.crm.exception.EmailAlreadyExistsException;
-import com.prakhar.crm.exception.ResourceNotFoundException;
+import com.prakhar.crm.exception.InvalidCredentialsException;
+import com.prakhar.crm.exception.ForbiddenException;
 import com.prakhar.crm.repository.UserRepository;
 import com.prakhar.crm.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,10 +29,14 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid email or password"));
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new ResourceNotFoundException("Invalid email or password");
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+
+        if (!user.isActive()) {
+            throw new ForbiddenException("Account is inactive");
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
@@ -50,7 +55,7 @@ public class AuthService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setActive(true);
-        user.setRole(Role.EMPLOYEE);
+        user.setRole(userRepository.count() == 0 ? Role.ADMIN : Role.EMPLOYEE);
 
         User saved = userRepository.save(user);
 

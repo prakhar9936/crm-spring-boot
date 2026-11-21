@@ -2,6 +2,7 @@ package com.prakhar.crm.service;
 
 import com.prakhar.crm.entity.Role;
 import com.prakhar.crm.entity.User;
+import com.prakhar.crm.exception.ForbiddenException;
 import com.prakhar.crm.exception.ResourceNotFoundException;
 import com.prakhar.crm.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,16 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         user.setRole(Role.ADMIN);
+        userRepository.save(user);
+    }
+
+    public void demoteToEmployee(Long id, String loggedInEmail) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        if (user.getEmail().equalsIgnoreCase(loggedInEmail)) {
+            throw new ForbiddenException("You cannot demote yourself");
+        }
+        user.setRole(Role.EMPLOYEE);
         userRepository.save(user);
     }
 }
