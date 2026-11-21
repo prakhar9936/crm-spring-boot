@@ -60,6 +60,9 @@ All endpoints except /api/auth/** and Swagger need a JWT token (Authorization: B
 - `PUT /api/contracts/{id}` - Update a contract (owner of the client or ADMIN)
 - `DELETE /api/contracts/{id}` - Delete a contract (owner of the client or ADMIN)
 
+### Dashboard
+- `GET /api/dashboard` - Aggregated CRM statistics (clients, users, contracts by status, contract values)
+
 Note: client ids and contract ids are different numbers.
 
 ## Run Locally (Windows PowerShell)
@@ -85,9 +88,9 @@ $env:DB_PASSWORD = "your_mysql_password"
 
 ## Run Tests
 ```powershell
-.\mvnw.cmd clean test "-Dtest=AuthServiceTest,ClientServiceTest,ContractServiceTest,UserServiceTest"
+.\mvnw.cmd clean test "-Dtest=AuthServiceTest,ClientServiceTest,ContractServiceTest,UserServiceTest,DashboardServiceTest"
 ```
-There are 24 unit tests (Mockito).
+There are 26 unit tests (Mockito).
 
 ## Project Structure
 - `controller` - REST endpoints
@@ -100,9 +103,8 @@ There are 24 unit tests (Mockito).
 - `security` - JwtAuthFilter, JwtUtil
 
 ## Status
-Working: auth, roles, clients, contracts, contract pagination and status filter, contract validation, inactive-user login block, demote endpoint, ownership rules, Swagger, unit tests.
+Working: auth, roles, clients, contracts, contract pagination and status filter, contract validation, dashboard statistics, inactive-user login block, demote endpoint, ownership rules, Swagger, unit tests.
 
 Planned:
-- Dashboard statistics
 - Admin user management
 - More tests and Docker
