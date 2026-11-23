@@ -28,10 +28,13 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers(PageRequest.of(page, size)));
     }
 
-    @GetMapping("/me")
-    public String getCurrentUser(Authentication authentication) {
-        return "You are logged in as: " + authentication.getName();
-    }
+@GetMapping("/me")
+public ResponseEntity<UserResponse> getCurrentUser(Authentication authentication) {
+
+    UserResponse user = userService.getUserByEmail(authentication.getName());
+
+    return ResponseEntity.ok(user);
+}
 
     @PutMapping("/{id}/promote")
     public ResponseEntity<String> promoteToAdmin(@PathVariable Long id) {

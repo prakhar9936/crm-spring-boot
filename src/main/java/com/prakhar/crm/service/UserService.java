@@ -25,8 +25,22 @@ public class UserService {
                         user.getFirstName(),
                         user.getLastName(),
                         user.getRole(),
-                        user.isActive()
-                ));
+                        user.isActive()));
+    }
+
+    public UserResponse getUserByEmail(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with email: " + email));
+
+        return new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getRole(),
+                user.isActive());
     }
 
     public void promoteToAdmin(Long id) {

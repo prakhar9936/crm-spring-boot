@@ -1,3 +1,4 @@
+
 package com.prakhar.crm;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -5,8 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prakhar.crm.repository.ClientRepository;
 import com.prakhar.crm.repository.ContractRepository;
 import com.prakhar.crm.repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,143 +29,251 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class CrmIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @Autowired
-    private ContractRepository contractRepository;
+        @Autowired
+        private ContractRepository contractRepository;
 
-    @Autowired
-    private ClientRepository clientRepository;
+        @Autowired
+        private ClientRepository clientRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    @BeforeEach
-    void setUp() {
-        contractRepository.deleteAll();
-        clientRepository.deleteAll();
-        userRepository.deleteAll();
-    }
+        @BeforeEach
+        void setUp() {
+                contractRepository.deleteAll();
+                clientRepository.deleteAll();
+                userRepository.deleteAll();
+        }
 
-    private String registerAndLogin(String firstName, String lastName, String email, String password) throws Exception {
-        String registerJson = String.format(
-                "{\"firstName\":\"%s\",\"lastName\":\"%s\",\"email\":\"%s\",\"password\":\"%s\"}",
-                firstName, lastName, email, password
-        );
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(registerJson))
-                .andExpect(status().isOk());
+        private String registerAndLogin(
+                        String firstName,
+                        String lastName,
+                        String email,
+                        String password) throws Exception {
 
-        String loginJson = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, password);
-        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginJson))
-                .andExpect(status().isOk())
-                .andReturn();
+                String registerJson = String.format(
+                                "{\"firstName\":\"%s\",\"lastName\":\"%s\",\"email\":\"%s\",\"password\":\"%s\"}",
+                                firstName, lastName, email, password);
 
-        JsonNode node = objectMapper.readTree(loginResult.getResponse().getContentAsString());
-        return node.get("token").asText();
-    }
+                mockMvc.perform(post("/api/auth/register")
+                                .header("X-Admin-Setup-Key", "test-admin-setup-key")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk());
 
-    @Test
-    void unauthenticatedAccess_isBlocked() throws Exception {
-        mockMvc.perform(get("/api/clients"))
-                .andExpect(status().isForbidden());
-    }
+                String loginJson = String.format(
+                                "{\"email\":\"%s\",\"password\":\"%s\"}",
+                                email, password);
 
-    @Test
-    void firstUserIsAdmin_secondIsEmployee_andAdminRoutesEnforceRole() throws Exception {
-        String adminToken = registerAndLogin("Admin", "User", "admin@crm.com", "password123");
-        String empToken = registerAndLogin("Emp", "User", "emp@crm.com", "password123");
+                MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andReturn();
 
-        mockMvc.perform(get("/api/users")
-                        .header("Authorization", "Bearer " + empToken))
-                .andExpect(status().isForbidden());
+                JsonNode node = objectMapper.readTree(
+                                loginResult.getResponse().getContentAsString());
 
-        mockMvc.perform(get("/api/users")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2));
-    }
+                return node.get("token").asText();
+        }
 
-    @Test
-    void endToEndClientContractAndDashboardFlow() throws Exception {
-        String adminToken = registerAndLogin("Admin", "User", "admin@crm.com", "password123");
+        @Test
+        void unauthenticatedAccess_isBlocked() throws Exception {
+                mockMvc.perform(get("/api/clients"))
+                                .andExpect(status().isForbidden());
+        }
 
-        String clientJson = "{\"firstName\":\"Acme\",\"lastName\":\"Corp\",\"email\":\"contact@acme.com\",\"phone\":\"9876543210\",\"companyName\":\"Acme Ltd\"}";
-        MvcResult clientResult = mockMvc.perform(post("/api/clients")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(clientJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("contact@acme.com"))
-                .andReturn();
+        @Test
+        void firstUserIsAdmin_secondIsEmployee_andAdminRoutesEnforceRole() throws Exception {
 
-        long clientId = objectMapper.readTree(clientResult.getResponse().getContentAsString()).get("id").asLong();
+                String adminToken = registerAndLogin(
+                                "Admin", "User", "admin@crm.com", "password123");
 
-        String contractJson = "{\"title\":\"Annual Support\",\"value\":50000.0,\"status\":\"ACTIVE\",\"startDate\":\"2026-01-01\",\"endDate\":\"2026-12-31\"}";
-        MvcResult contractResult = mockMvc.perform(post("/api/clients/" + clientId + "/contracts")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(contractJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Annual Support"))
-                .andReturn();
+                String empToken = registerAndLogin(
+                                "Emp", "User", "emp@crm.com", "password123");
 
-        long contractId = objectMapper.readTree(contractResult.getResponse().getContentAsString()).get("id").asLong();
+                mockMvc.perform(get("/api/users")
+                                .header("Authorization", "Bearer " + empToken))
+                                .andExpect(status().isForbidden());
 
-        mockMvc.perform(delete("/api/clients/" + clientId)
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isConflict());
+                mockMvc.perform(get("/api/users")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content.length()").value(2));
+        }
 
-        mockMvc.perform(get("/api/dashboard")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalClients").value(1))
-                .andExpect(jsonPath("$.totalContracts").value(1));
+        @Test
+        void endToEndClientContractAndDashboardFlow() throws Exception {
 
-        mockMvc.perform(delete("/api/contracts/" + contractId)
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNoContent());
+                String adminToken = registerAndLogin(
+                                "Admin", "User", "admin@crm.com", "password123");
 
-        mockMvc.perform(delete("/api/clients/" + clientId)
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNoContent());
-    }
+                String clientJson = "{\"firstName\":\"Acme\",\"lastName\":\"Corp\",\"email\":\"contact@acme.com\",\"phone\":\"9876543210\",\"companyName\":\"Acme Ltd\"}";
 
-    @Test
-    void validationAndDeactivationFlow() throws Exception {
-        String adminToken = registerAndLogin("Admin", "User", "admin@crm.com", "password123");
-        registerAndLogin("Emp", "User", "emp@crm.com", "password123");
+                MvcResult clientResult = mockMvc.perform(post("/api/clients")
+                                .header("Authorization", "Bearer " + adminToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(clientJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.email").value("contact@acme.com"))
+                                .andReturn();
 
-        mockMvc.perform(post("/api/clients")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"firstName\":\"\",\"lastName\":\"\",\"email\":\"not-an-email\"}"))
-                .andExpect(status().isBadRequest());
+                long clientId = objectMapper.readTree(
+                                clientResult.getResponse().getContentAsString())
+                                .get("id").asLong();
 
-        MvcResult usersResult = mockMvc.perform(get("/api/users")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andReturn();
+                String contractJson = "{\"title\":\"Annual Support\",\"value\":50000.0,\"status\":\"ACTIVE\",\"startDate\":\"2026-01-01\",\"endDate\":\"2026-12-31\"}";
 
-        JsonNode content = objectMapper.readTree(usersResult.getResponse().getContentAsString()).get("content");
-        long empId = content.get(0).get("email").asText().equals("emp@crm.com")
-                ? content.get(0).get("id").asLong()
-                : content.get(1).get("id").asLong();
+                MvcResult contractResult = mockMvc.perform(
+                                post("/api/clients/" + clientId + "/contracts")
+                                                .header("Authorization", "Bearer " + adminToken)
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(contractJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.title").value("Annual Support"))
+                                .andReturn();
 
-        mockMvc.perform(put("/api/users/" + empId + "/deactivate")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                long contractId = objectMapper.readTree(
+                                contractResult.getResponse().getContentAsString())
+                                .get("id").asLong();
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"emp@crm.com\",\"password\":\"password123\"}"))
-                .andExpect(status().isForbidden());
-    }
+                mockMvc.perform(delete("/api/clients/" + clientId)
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isConflict());
+
+                mockMvc.perform(get("/api/dashboard")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.totalClients").value(1))
+                                .andExpect(jsonPath("$.totalContracts").value(1));
+
+                mockMvc.perform(delete("/api/contracts/" + contractId)
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isNoContent());
+
+                mockMvc.perform(delete("/api/clients/" + clientId)
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isNoContent());
+        }
+
+        @Test
+        void validationAndDeactivationFlow() throws Exception {
+
+                String adminToken = registerAndLogin(
+                                "Admin", "User", "admin@crm.com", "password123");
+
+                registerAndLogin(
+                                "Emp", "User", "emp@crm.com", "password123");
+
+                mockMvc.perform(post("/api/clients")
+                                .header("Authorization", "Bearer " + adminToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"firstName\":\"\",\"lastName\":\"\",\"email\":\"not-an-email\"}"))
+                                .andExpect(status().isBadRequest());
+
+                MvcResult usersResult = mockMvc.perform(get("/api/users")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk())
+                                .andReturn();
+
+                JsonNode content = objectMapper.readTree(
+                                usersResult.getResponse().getContentAsString())
+                                .get("content");
+
+                long empId = content.get(0).get("email").asText().equals("emp@crm.com")
+                                ? content.get(0).get("id").asLong()
+                                : content.get(1).get("id").asLong();
+
+                mockMvc.perform(put("/api/users/" + empId + "/deactivate")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"email\":\"emp@crm.com\",\"password\":\"password123\"}"))
+                                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void oldTokenStopsWorkingAfterDeactivation() throws Exception {
+
+                String adminToken = registerAndLogin(
+                                "Admin", "User", "admin@crm.com", "password123");
+
+                String empToken = registerAndLogin(
+                                "Emp", "User", "emp@crm.com", "password123");
+
+                long empId = userRepository.findByEmail("emp@crm.com")
+                                .get().getId();
+
+                mockMvc.perform(get("/api/clients/my")
+                                .header("Authorization", "Bearer " + empToken))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(put("/api/users/" + empId + "/deactivate")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/clients/my")
+                                .header("Authorization", "Bearer " + empToken))
+                                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void roleChangesApplyImmediatelyWithTheSameToken() throws Exception {
+
+                String adminToken = registerAndLogin(
+                                "Admin", "User", "admin@crm.com", "password123");
+
+                String empToken = registerAndLogin(
+                                "Emp", "User", "emp@crm.com", "password123");
+
+                long empId = userRepository.findByEmail("emp@crm.com")
+                                .get().getId();
+
+                mockMvc.perform(get("/api/users")
+                                .header("Authorization", "Bearer " + empToken))
+                                .andExpect(status().isForbidden());
+
+                mockMvc.perform(put("/api/users/" + empId + "/promote")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/users")
+                                .header("Authorization", "Bearer " + empToken))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(put("/api/users/" + empId + "/demote")
+                                .header("Authorization", "Bearer " + adminToken))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/users")
+                                .header("Authorization", "Bearer " + empToken))
+                                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void getCurrentUser_returnsUserDetails() throws Exception {
+
+                String token = registerAndLogin(
+                                "Prakhar",
+                                "Agrawal",
+                                "prakhar@crm.com",
+                                "password123");
+
+                mockMvc.perform(get("/api/users/me")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.email").value("prakhar@crm.com"))
+                                .andExpect(jsonPath("$.firstName").value("Prakhar"))
+                                .andExpect(jsonPath("$.lastName").value("Agrawal"))
+                                .andExpect(jsonPath("$.role").value("ADMIN"))
+                                .andExpect(jsonPath("$.active").value(true));
+        }
 }

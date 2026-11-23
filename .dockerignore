@@ -1,5 +1,12 @@
-target
-.git
+
+target/
+.git/
 .gitignore
+.idea/
+.vscode/
+*.iml
+*.log
 *.bak
-*.md
+.env
+.env.*
+!.env.example

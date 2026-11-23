@@ -1,3 +1,4 @@
+
 package com.prakhar.crm.service;
 
 import com.prakhar.crm.dto.LoginRequest;
@@ -12,8 +13,12 @@ import com.prakhar.crm.exception.ForbiddenException;
 import com.prakhar.crm.repository.UserRepository;
 import com.prakhar.crm.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 @Service
 public class AuthService {
@@ -26,6 +31,9 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Value("${ADMIN_SETUP_KEY:}")
+    private String adminSetupKey;
 
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -43,10 +51,16 @@ public class AuthService {
         return new LoginResponse(token, user.getEmail());
     }
 
-    public UserResponse register(RegisterRequest request) {
+    public UserResponse register(RegisterRequest request, String providedSetupKey) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email already registered: " + request.getEmail());
+        }
+
+        boolean firstUser = userRepository.count() == 0;
+
+        if (firstUser && !isValidAdminSetupKey(providedSetupKey)) {
+            throw new ForbiddenException("A valid admin setup key is required for initial registration");
         }
 
         User user = new User();
@@ -55,7 +69,7 @@ public class AuthService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setActive(true);
-        user.setRole(userRepository.count() == 0 ? Role.ADMIN : Role.EMPLOYEE);
+        user.setRole(firstUser ? Role.ADMIN : Role.EMPLOYEE);
 
         User saved = userRepository.save(user);
 
@@ -63,7 +77,17 @@ public class AuthService {
                 saved.getId(),
                 saved.getEmail(),
                 saved.getFirstName(),
-                saved.getLastName()
-        );
+                saved.getLastName());
+    }
+
+    private boolean isValidAdminSetupKey(String providedKey) {
+        if (adminSetupKey == null || adminSetupKey.isBlank()
+                || providedKey == null || providedKey.isBlank()) {
+            return false;
+        }
+
+        return MessageDigest.isEqual(
+                adminSetupKey.getBytes(StandardCharsets.UTF_8),
+                providedKey.getBytes(StandardCharsets.UTF_8));
     }
 }

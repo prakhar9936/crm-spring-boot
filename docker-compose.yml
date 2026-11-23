@@ -1,30 +1,37 @@
+
 services:
   mysql:
     image: mysql:8.0
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-mysql123}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       MYSQL_DATABASE: crm_db
     ports:
-      - "3309:3306"
+      - "3310:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-mysql123}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 10s
       timeout: 5s
       retries: 10
 
   app:
     build: .
+    restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
     environment:
+      PORT: 9090
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/crm_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
-      DB_PASSWORD: ${DB_PASSWORD:-mysql123}
-      JWT_SECRET: ${JWT_SECRET:-ThisIsAVeryLongSecretKeyForJWTSigningPleaseChangeInProductionMinimum256Bits}
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ADMIN_SETUP_KEY: ${ADMIN_SETUP_KEY:?Set ADMIN_SETUP_KEY in .env}
+      SHOW_SQL: "false"
     ports:
-      - "9090:9090"
+      - "9092:9090"
 
 volumes:
   mysql_data:

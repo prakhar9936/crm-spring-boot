@@ -63,7 +63,19 @@ public class ClientService {
     }
 
     public Page<ClientResponse> searchClients(String name, Pageable pageable) {
-        Page<Client> clients = clientRepository.findByFirstNameContainingIgnoreCase(name, pageable);
+
+        if (name == null || name.isBlank()) {
+            return clientRepository.findAll(pageable)
+                    .map(this::toResponse);
+        }
+
+        String searchName = name.trim();
+
+        Page<Client> clients = clientRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+                searchName,
+                searchName,
+                pageable);
+
         return clients.map(this::toResponse);
     }
 
@@ -135,7 +147,6 @@ public class ClientService {
                 client.getEmail(),
                 client.getPhone(),
                 client.getCompanyName(),
-                client.getAssignedUser() != null ? client.getAssignedUser().getEmail() : null
-        );
+                client.getAssignedUser() != null ? client.getAssignedUser().getEmail() : null);
     }
 }
