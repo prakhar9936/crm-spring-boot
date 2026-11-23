@@ -70,6 +70,22 @@ All endpoints except /api/auth/** and Swagger need a JWT token (Authorization: B
 
 Note: client ids and contract ids are different numbers.
 
+## Run with Docker
+
+1. Make sure Docker Desktop is running.
+2. Build and start the app and MySQL containers:
+
+```powershell
+docker compose up --build -d
+```
+
+3. The app runs on `http://localhost:9090` (Swagger UI at `http://localhost:9090/swagger-ui/index.html`) and MySQL is exposed on host port `3309`.
+4. Stop the containers when done:
+
+```powershell
+docker compose down
+```
+
 ## Run Locally (Windows PowerShell)
 
 1. Install Java 17 or newer and MySQL 8. This project expects MySQL on 127.0.0.1 port 3307. If your MySQL uses another port, change it in `src/main/resources/application.properties`. The database `crm_db` is created automatically.
@@ -95,7 +111,7 @@ $env:DB_PASSWORD = "your_mysql_password"
 ```powershell
 .\mvnw.cmd clean test "-Dtest=AuthServiceTest,ClientServiceTest,ContractServiceTest,UserServiceTest,DashboardServiceTest"
 ```
-There are 30 unit tests (Mockito).
+There are 35 tests total (30 Mockito unit tests + 4 MockMvc/SpringBootTest integration tests + context load test).
 
 ## Project Structure
 - `controller` - REST endpoints
@@ -108,7 +124,7 @@ There are 30 unit tests (Mockito).
 - `security` - JwtAuthFilter, JwtUtil
 
 ## Status
-Working: auth, roles, admin user management, clients, contracts, contract pagination and status filter, contract validation, dashboard statistics, inactive-user login block, demote endpoint, ownership rules, Swagger, unit tests.
+Working: auth, roles, admin user management, clients, contracts, contract pagination and status filter, contract validation, dashboard statistics, inactive-user login block, demote endpoint, ownership rules, Swagger, unit and integration tests, Docker.
 
 Planned:
-- More tests and Docker
+- None (all core features, Docker, and tests complete)
